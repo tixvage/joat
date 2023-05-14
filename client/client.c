@@ -12,76 +12,15 @@
 #include "utf8.h"
 #include "lerp.h"
 #include "rendering.h"
-
-#define min(a,b) (((a)<(b))?(a):(b))
-#define max(a,b) (((a)>(b))?(a):(b))
-#define clamp(x, l, h) min(h, max(l, x))
+#include "message.h"
+#include "math_utils.h"
 
 #define MESSAGE_DISPLAY_LIMIT 20
 
-const int text_size = DEFAULT_FONT_SIZE;
+int text_size = DEFAULT_FONT_SIZE;
 
-typedef struct Message {
-    utf8_t *from;
-    int id;
-    utf8_t *msg;
-} Message;
-
-typedef struct Message_History {
-    Message *msgs;
-    int len;
-    int index;
-} Message_History;
-
-static Message_History history;
 static Renderer renderer;
-
-void push_message(Message msg) {
-    if (history.msgs == NULL) {
-        history.msgs = calloc(1, sizeof(Message));
-        history.len = 1;
-    } else {
-        history.msgs = realloc(history.msgs, sizeof(Message) * (history.len + 1));
-        history.len += 1;
-    }
-
-    history.msgs[history.len - 1] = msg;
-    history.index = history.len;
-}
-
-void render_history(void) {
-    for (int i = 0; i < min(history.index, MESSAGE_DISPLAY_LIMIT); i++) {
-        Message msg = history.msgs[history.index - i - 1];
-        utf8_t *final_nick = calloc(utf8_len(msg.from) + 3, sizeof(utf8_t));
-        final_nick[0] = '<';
-        for (int i = 1; i < utf8_len(msg.from) + 1; i++) {
-            final_nick[i] = msg.from[i - 1];
-        }
-        final_nick[utf8_len(msg.from) + 1] = '>';
-        float y = GetScreenHeight() - (i * text_size) - text_size - text_size;
-        render_utf8_indep(&renderer, final_nick, text_size, 0, y, DARKGREEN);
-        int x = measure_text_utf8(&renderer, text_size, final_nick).x;
-        render_utf8_indep(&renderer, msg.msg, text_size, x + 10, y, WHITE);
-        free(final_nick);
-    }
-}
-
-bool utf8_compare_substr(utf8_t *str, char *compare, int start) {
-    int len_str = utf8_len(str);
-    int len_compare = strlen(compare);
-
-    if (len_str < start + len_compare) {
-        return false;
-    }
-
-    for (int i = start; i < len_compare; i++) {
-        if (str[i] != compare[i - start]) {
-            return false;
-        }
-    }
-
-    return true;
-}
+static Message_History history;
 
 int main(void) {
     init_network();
@@ -91,6 +30,7 @@ int main(void) {
     SetTargetFPS(60);
 
     renderer = init_renderer(800, 600);
+    history = init_message_history(MESSAGE_DISPLAY_LIMIT);
 
     utf8_t *str = NULL;
 
@@ -112,7 +52,7 @@ int main(void) {
 
         if (IsKeyPressed(KEY_ENTER) && str != NULL) {
             if (str[0] == '/') {
-                if (utf8_compare_substr(str, "nick ", 1)) {
+                if (utf8_compare_subcstr(str, "nick ", 1)) {
                     utf8_t *nick = &str[6];
 
                     Buffer send = create_buffer();
@@ -150,7 +90,7 @@ int main(void) {
             DrawCircle(10, textbox_rect.y + (textbox_rect.height / 2), textbox_rect.height / 2, l);
             DrawCircle(GetScreenWidth() - 10, textbox_rect.y + (textbox_rect.height / 2), textbox_rect.height / 2, r);
         }
-        render_history();
+        render_history(&history, &renderer, text_size);
         Rectangle cursor_rect = { 0 };
         cursor_rect.width = text_size / 3;
         cursor_rect.height = text_size / 3 * 2;
@@ -181,7 +121,7 @@ int main(void) {
                             utf8_t* msg_str = buffer_get_utf8(&buffer);
                             printf("<%ls:%d> \"%ls\"\n", from_str, from_id, msg_str);
                             Message msg = {from_str, from_id, msg_str};
-                            push_message(msg);
+                            push_message(&history, msg);
                         }
                     } break;
                 default: break;

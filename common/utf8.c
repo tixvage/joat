@@ -1,6 +1,7 @@
 #include "utf8.h"
 
 #include <stdlib.h>
+#include <string.h>
 
 int utf8_len(utf8_t *str) {
     if (str == NULL) return 0;
@@ -36,6 +37,24 @@ utf8_t *utf8_remove_last(utf8_t *str) {
 
     return str;
 }
+
+bool utf8_compare_subcstr(utf8_t *str, char *compare, int start) {
+    int len_str = utf8_len(str);
+    int len_compare = strlen(compare);
+
+    if (len_str < start + len_compare) {
+        return false;
+    }
+
+    for (int i = start; i < len_compare; i++) {
+        if (str[i] != compare[i - start]) {
+            return false;
+        }
+    }
+
+    return true;
+}
+
 
 char *utf8_to_cstr(utf8_t *str) {
     int len = utf8_len(str);

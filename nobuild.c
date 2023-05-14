@@ -3,7 +3,7 @@
 
 #define COMMON_CFLAGS "-Wall", "-Wextra", "-Wno-gnu-zero-variadic-macro-arguments", "-pedantic", "-std=c11", "-ggdb", "-I./common"
 #define CC "clang"
-#define CLIENT_SRCS "client/client.c", "client/hsv.c", "client/lerp.c", "client/rendering.c", "client/networking.c"
+#define CLIENT_SRCS "client/client.c", "client/hsv.c", "client/lerp.c", "client/rendering.c", "client/networking.c", "client/message.c"
 #define SERVER_SRCS "server/server.c"
 #define COMMON_SRCS "common/buffer.c", "common/utf8.c"
 

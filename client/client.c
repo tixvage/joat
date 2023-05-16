@@ -15,6 +15,8 @@
 #include "message.h"
 #include "math_utils.h"
 
+#define BACKGROUND (Color){51, 12, 12, 255}
+
 #define MESSAGE_DISPLAY_LIMIT 20
 
 int text_size = DEFAULT_FONT_SIZE;
@@ -34,6 +36,7 @@ int main(void) {
 
     utf8_t *str = NULL;
 
+    //this thing sucks
     Lerp textbox_l = new_lerp(DARKBLUE, DARKGREEN, 5.f);
     Lerp textbox_r = new_lerp(DARKGREEN, DARKBLUE, 5.f);
     Lerp cursor = new_lerp(WHITE, GREEN, 0.8f);
@@ -46,11 +49,14 @@ int main(void) {
             str = utf8_add_char(str, key);
         }
 
+        //TODO: iskeydown isn't working like in SDL
+        //TODO: proper text editing
         if (IsKeyDown(KEY_BACKSPACE)) {
             str = utf8_remove_last(str);
         }
 
         if (IsKeyPressed(KEY_ENTER) && str != NULL) {
+            //TODO: proper way for parsing commands
             if (str[0] == '/') {
                 if (utf8_compare_subcstr(str, "nick ", 1)) {
                     utf8_t *nick = &str[6];
@@ -78,7 +84,8 @@ int main(void) {
         history.index = clamp(history.index - scroll, MESSAGE_DISPLAY_LIMIT, history.len);
 
         BeginDrawing();
-        ClearBackground((Color){51, 12, 12, 255});
+        ClearBackground(BACKGROUND);
+        //render textbox
         {
             Rectangle textbox_rect = { 0 };
             textbox_rect.width = GetScreenWidth() - 20;
@@ -91,18 +98,20 @@ int main(void) {
             DrawCircle(GetScreenWidth() - 10, textbox_rect.y + (textbox_rect.height / 2), textbox_rect.height / 2, r);
         }
         render_history(&history, &renderer, text_size);
-        Rectangle cursor_rect = { 0 };
-        cursor_rect.width = text_size / 3;
-        cursor_rect.height = text_size / 3 * 2;
-        cursor_rect.y = GetScreenHeight() -  cursor_rect.height - (text_size / 6);
-        cursor_rect.x = 0;
-        if (str != NULL && utf8_len(str) > 0) {
-            cursor_rect.x = measure_text_utf8(&renderer, text_size, str).x;
-            render_utf8_indep(&renderer, str, text_size, 0, GetScreenHeight() - text_size, WHITE);
+        //render cursor
+        {
+            Rectangle cursor_rect = { 0 };
+            cursor_rect.width = text_size / 3;
+            cursor_rect.height = text_size / 3 * 2;
+            cursor_rect.y = GetScreenHeight() -  cursor_rect.height - (text_size / 6);
+            cursor_rect.x = 0;
+            if (str != NULL && utf8_len(str) > 0) {
+                //render text
+                cursor_rect.x = measure_text_utf8(&renderer, text_size, str).x;
+                render_utf8_indep(&renderer, str, text_size, 0, GetScreenHeight() - text_size, WHITE);
+            }
+            DrawRectangleRec(cursor_rect, update_lerp(&cursor));
         }
-        DrawRectangleRec(cursor_rect, update_lerp(&cursor));
-        DrawRectangleRounded((Rectangle){GetScreenWidth() - 40, 20, 20, GetScreenHeight() - 70}, 0.9f, 0, (Color){80, 150, 130, 50});
-        DrawRectangleRounded((Rectangle){GetScreenWidth() - 35, 50, 10, 70}, 0.9f, 0, (Color){80, 150, 130, 50});
         EndDrawing();
 
         ENetEvent event = { 0 };
@@ -112,6 +121,7 @@ int main(void) {
                     {
                         Buffer buffer = create_buffer_with_data(event.packet->data, event.packet->dataLength);
                         Command c = buffer_get(&buffer, Command);
+                        //command parsing
                         if (c == Command_GiveId) {
                             int id = buffer_get(&buffer, int);
                             client.id = id;
@@ -119,7 +129,6 @@ int main(void) {
                             int from_id = buffer_get(&buffer, int);
                             utf8_t* from_str = buffer_get_utf8(&buffer);
                             utf8_t* msg_str = buffer_get_utf8(&buffer);
-                            printf("<%ls:%d> \"%ls\"\n", from_str, from_id, msg_str);
                             Message msg = {from_str, from_id, msg_str};
                             push_message(&history, msg);
                         }
@@ -129,7 +138,7 @@ int main(void) {
         }
     }
 
-    //Sending message before we leave
+    //sending message before we leave
     Buffer buffer = create_buffer();
     buffer_push(&buffer, client.id, int);
     buffer_push(&buffer, Command_Leave, Command);
@@ -137,6 +146,7 @@ int main(void) {
     destroy_buffer(buffer);
     enet_host_service(client.host, NULL, 0);
 
+    //deinitialization
     CloseWindow();
     deinit_network();
 

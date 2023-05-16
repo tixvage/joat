@@ -1,6 +1,8 @@
 #include "hsv.h"
 #include <math.h>
 
+//probably taken from stackoverflow
+
 HSV rgb2hsv(Color in) {
     HSV         out;
     double      min, max, delta;

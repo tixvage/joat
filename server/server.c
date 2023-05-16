@@ -78,7 +78,7 @@ int main(void) {
         .host = ENET_HOST_ANY,
         .port = 1234,
     };
-    ENetHost *server = enet_host_create (&address, 32, 2, 0, 0);
+    ENetHost *server = enet_host_create(&address, 32, 2, 0, 0);
     if (server == NULL) {
         fprintf (stderr, "An error occurred while trying to create an enet server host.\n");
         return 1;
